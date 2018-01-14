@@ -9,36 +9,83 @@
 	background-color: rgba(255,0,0, 0.1);
 }
 
-.validity-note_error {
+.validity-input_success {
+	border: 1px solid green;
+	background-color: rgba(0,0,255 0.1);
+}
+
+.validity-note {
 	white-space: nowrap;
 	font-size: 12px;
-	color: red;
-	padding: 5px 10px;
-	border: 1px solid red;
 	background-color: #fff;
+	padding: 5px 10px;
 	z-index: 10;
+
+	color: blue;
+	border: 1px solid blue;
+}
+
+.validity-note_static {
+	border: none;
+}
+
+.validity-note_error {
+	border-color: red;
+	color: red;
+}
+
+.validity-note_success {
+	padding: 5px;
+	border-color: transparent;
+	color: green;
 }
 
 .validity-tooltip_top {
 	border-left: 5px solid transparent;
-	border-bottom: 7px solid red;
+	border-bottom: 7px solid blue;
 	border-right: 5px solid transparent;
 }
 
 .validity-tooltip_bottom {
 	border-left: 5px solid transparent;
-	border-top: 7px solid red;
+	border-top: 7px solid blue;
 	border-right: 5px solid transparent;
 }
 
 .validity-tooltip_left {
 	border-top: 5px solid transparent;
-	border-right: 7px solid red;
+	border-right: 7px solid blue;
 	border-bottom: 5px solid transparent;
 }
 
 .validity-tooltip_right {
 	border-top: 5px solid transparent;
-	border-left: 7px solid red;
+	border-left: 7px solid blue;
 	border-bottom: 5px solid transparent;
+}
+
+.validity-note_error .validity-tooltip_top {
+	border-bottom-color: red;
+}
+.validity-note_error .validity-tooltip_bottom {
+	border-top-color: red;
+}
+.validity-note_error .validity-tooltip_left {
+	border-right-color: red;
+}
+.validity-note_error .validity-tooltip_right {
+	border-left-color: red;
+}
+
+.validity-note_success .validity-tooltip_top {
+	border-bottom-color: green;
+}
+.validity-note_success .validity-tooltip_bottom {
+	border-top-color: green;
+}
+.validity-note_success .validity-tooltip_left {
+	border-right-color: green;
+}
+.validity-note_success .validity-tooltip_right {
+	border-left-color: green;
 }

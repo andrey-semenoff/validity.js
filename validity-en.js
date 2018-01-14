@@ -17,6 +17,10 @@
 				maxlength: 'Maximal %name field\'s langth - %x symbols',
 				pattern: 'Field %name filling is wrong',
 				number: 'Field %name value must be a number',
+				form_send_ok: 'Form sent successfully!',
+				form_send_error: 'Form haven\'t been sent!',
+				detect_intervention: 'Detect interverntion in form code!',
+				validation_error: 'Detect errors in form fields!'
 			};
 		}
 })(jQuery);
