@@ -8,8 +8,9 @@
 		validity: function(options) {
 			var $forms = $(this), 
 					defaults = {
+						debug: false,
 						ajax: false,
-						action: 'mail.php',
+						action: '/',
 						method: 'POST',
 						dataType: 'json',
 						cache: false,
@@ -35,33 +36,37 @@
 						language: null,
 						show_names: true,
 						detectIntervention: true,
-						onValidationOk: function($form) {
+						focusInvalid: true,
+						onValidationOk: function(e, $form) {
 
 							configure_form($form);
 
 							if( defaults.ajax ) {
+								e.preventDefault();
 								
-								let formData = $form.serialize();
-								console.log('ajax');
-								console.log(formData);
-								showFormMsg($form, messages.form_send_ok, 'success');
-								showFormMsg($form, messages.form_send_error, 'error');
+								var formData = $form.serialize();
+								if(defaults.debug) console.log('ajax');
+								if(defaults.debug) console.log(formData);
 
-								// $.ajax({
-								// 	url: defaults.action,
-								// 	data: defaults.formData,
-								// 	method: defaults.method,
-								// 	dataType: defaults.dataType,
-								// 	cache: defaults.cache,
-								// 	success: function(data) {
-								// 		console.log('success');
-								// 		console.log(data);
-								// 	},
-								// 	error: function(data) {
-								// 		console.log('error');
-								// 		console.log(data);
-								// 	},
-								// });
+								$form.find('button, input[type="submit"]').attr('disabled', true);
+
+								$.ajax({
+									type: defaults.method,
+									url: defaults.action,
+									data: formData,
+									method: defaults.method,
+									dataType: defaults.dataType,
+									cache: defaults.cache,
+									success: function(data) {
+										defaults.onAjaxOk(data, $form);
+									},
+									error: function(data) {
+										if(defaults.debug) console.log('error');
+										if(defaults.debug) console.log(data);
+									}
+								}).always(function () {
+
+								});
 
 							} else {
 								console.log('reload');
@@ -69,10 +74,12 @@
 							}
 						},
 						onValidationError: function($form, message, status) {
-							showFormMsg($form, message, status);
+							if( !$('.msgBox').length ) showFormMsg($form, message, status);
 						},
-						onAjaxOk: function() {},
-						onAjaxError: function() {},
+						onAjaxOk: function (data, $form) {
+							if(defaults.debug) console.log('ajaxOk');
+							if(defaults.debug) console.log(data);
+						}
 					},
 					messages = {
 						required: 'Поле %name не должно быть пустым',
@@ -108,9 +115,9 @@
 						},
 						'length': function(val, params) {
 							if( params.length ) {
-								let min = params[0];
+								var min = params[0];
 								if( params.length > 1 ) {
-									let max = params[1];
+									var max = params[1];
 									if( val.length > max ) return {status: false, msg: messages.length_max.replace('%x', max)};
 								}
 								
@@ -144,7 +151,7 @@
 							else return {status: false, msg: messages.number};
 						},
 						'type': function(val, type) {
-							let response; 
+							var response; 
 							switch( type ) {
 								case 'email':
 									response = rules['email'](val);
@@ -172,8 +179,7 @@
 							}
 
 				    	return response;
-						},
-
+						}
 					};
 
 			// Run plugin
@@ -197,11 +203,11 @@
 			// Analize forms, create input set, bind form events
 			function analizeForms() {
 				$forms.each(function() {
-					let $form = $(this),
+					var $form = $(this),
 							fieldset = [];
 
 					$form.find(defaults.elements).not(defaults.exclude).each(function() {
-						let $this = $(this),
+						var $this = $(this),
 								name = $this.attr('name'),
 								attributes = $this[0].attributes;
 
@@ -209,14 +215,14 @@
 						fieldset[name]['tagName'] = $this[0].tagName.toLowerCase();
 						fieldset[name]['type'] = $this[0].type;
 						
-						let rules = '';
+						var rules = '';
 						if( $this.data('rules') ) {
 							rules = $this.data('rules').split('|');
 							rules.forEach(function(item, i) { rules[i] = item.replace(/\s/g, "") })
 						}
 						fieldset[name]['rules'] = rules;
 
-						let attr = ['required', 'maxlength', 'pattern', 'min', 'max'];
+						var attr = ['required', 'maxlength', 'pattern', 'min', 'max'];
 						fieldset[name]['attr'] = [];
 						attr.forEach(function(item) {
 							if( item in attributes ) {
@@ -225,18 +231,21 @@
 						});
 						fieldset[name]['attr']['type'] = fieldset[name]['type'];
 					});
-console.log(fieldset);
+					if(defaults.debug) console.log(fieldset);
 					$form.attr('novalidate', true);
 
 					$form.submit(function(e) {
-								e.preventDefault();
 
 						// Validate form
 						if( validate(this, fieldset) ) {
-							defaults.onValidationOk($form);
+							defaults.onValidationOk(e, $form);
 						} else {
+							if( defaults.focusInvalid ) {
+								$form.find("."+defaults.inputStyle+ "_"+ defaults.errorClass).first().focus();
+							}
 							defaults.onValidationError($form, messages.validation_error, 'error');
 						}
+						return false;
 					});
 				});
 			}
@@ -244,14 +253,14 @@ console.log(fieldset);
 			// Validate set of form's inputs
 			function validate(form, fieldset) {
 	// console.log(fieldset);
-				let $form = $(form),
+				var $form = $(form),
 						isValid = true;
 
 				$form.find('.validity-note').remove();
 				$form.find('.'+defaults.inputStyle + '_' + defaults.errorClass).removeClass(defaults.inputStyle + '_' + defaults.errorClass);
 
 				for( name in fieldset ) {
-					let $field = $form.find('[name='+ name +']'),
+					var $field = $form.find('[name='+ name +']'),
 							field_value = '',
 							show_name = '',
 							testValid,
@@ -261,9 +270,10 @@ console.log(fieldset);
 						field_value = $field.val().trim();	
 						$field.val(field_value);
 					} else {
-						console.warn('Field "'+ name + '" have been lost!');
-						
+						if(defaults.debug) console.log('%c Field "'+ name + '" have been lost!', 'background-color: red; color: white;');
+
 						if( defaults.detectIntervention ) {
+							if(defaults.debug) console.log('%c '+ messages.detect_intervention, 'background-color: red; color: white;');
 							showFormMsg($form, messages.detect_intervention, 'error');
 							isValid = false;
 							break;
@@ -281,7 +291,7 @@ console.log(fieldset);
 							testValid = {status: true};
 						} else {
 							fieldset[name].rules.forEach(function(rule) {
-								let rule_params = rule.match(/\([^\)]*\)/);
+								var rule_params = rule.match(/\([^\)]*\)/);
 								rule = rule.replace(/\(.*\)/, '');
 
 								if( rule_params !== null ) {
@@ -365,7 +375,7 @@ console.log(fieldset);
 
 			// Show message with result of input validation
 			function showInputMsg($field, msg, status) {
-				let position = defaults.position.split('|')
+				var position = defaults.position.split('|')
 						classSuffix = '';
 
 				if( status == 'error' ) {
@@ -379,14 +389,14 @@ console.log(fieldset);
 				if( position[0] == 'static' ) {
 					$field.after("<div class='validity-note validity-note_static validity-note_"+ classSuffix +"'>"+ msg +"</div>");
 				} else {
-					let $parent = $field.parent(),
+					var $parent = $field.parent(),
 							style = 'position:' + position[0] +';',
 							tooltip = '';
 
 					positions = position[1].split('/');
 
 					positions.forEach(function(pos) {
-						let pos_name, pos_param; 
+						var pos_name, pos_param; 
 
 						if( /\[.*\]/.test(pos) ) {
 							pos_name = pos.replace(/\[.*\]/, '');
@@ -400,10 +410,10 @@ console.log(fieldset);
 
 					if( status !== 'success' || (status == 'success' && defaults.inputSuccess.tooltip) ) {
 						if( defaults.tooltip && position[0] == 'absolute' ) {
-							let tooltip_style = 'position: absolute;';
+							var tooltip_style = 'position: absolute;';
 
 							defaults.tooltipPos.split('/').forEach(function(pos) {
-								let pos_name, pos_param;
+								var pos_name, pos_param;
 								if( /\[.*\]/.test(pos) ) {
 									tooltip_pos_name = pos.replace(/\[.*\]/, '');
 									tooltip_pos_param = pos.match(/\[.*\]/)[0].replace(/[\[\]]/g, '');
@@ -426,13 +436,32 @@ console.log(fieldset);
 			}
 
 			function showFormMsg($form, msg, status) {
-				if( status == 'error' ) {
-					console.error(msg);
-				} else if( status == 'success' ) {
-					console.log(msg);
-				} else {
-					console.warn(msg);
+				var $msgBox = $('.msgBox');
+
+				if( !$msgBox.length ) {
+					$form.append("<div class='msgBox'></div>")
 				}
+
+				$msgBox = $('.msgBox').addClass('msgBox_'+ status);
+
+				$msgBox.html(msg);
+
+				$msgBox.fadeIn('fast', 'linear', function () {
+					$(this).animate({ opacity: 1, 'top': "+=50" }, 500);
+				});
+
+				setTimeout(function () {
+					$msgBox.animate({ opacity: 0, top: "-=50" }, 500, function () {
+						$(this).fadeOut(function () {
+							$(this).remove();
+							$form.find('button, input[type="submit"]').attr('disabled', false);
+							if( status == 'success' ) {
+								$form[0].reset();
+								$.modal.close();
+							}
+						});
+					});
+				}, 4000);
 			}
 
 			return this.init;
