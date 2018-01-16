@@ -7,7 +7,7 @@
 	$.fn.extend({
 		validity: function(options) {
 			var $forms = $(this),
-					stopSpam = false, 
+					stopSpam = false,
 					defaults = {
 						debug: false,
 						validateControls: 'input:not([type=hidden],[type=image],[type=reset],[type=submit],[type=button],[type=file]), textarea, select',
@@ -31,7 +31,7 @@
 							parent: 'auto',
 							errorBox: {
 								className: false,
-								errorBoxParent: 'auto',
+								errorBoxParent: 'auto'
 							},
 							tooltip: true,
 							tooltipClass: 'validity-tooltip',
@@ -48,8 +48,7 @@
 						},
 
 						formMsg: {
-							className: 'msgBox',
-
+							className: 'msgBox'
 						},
 
 						language: null,
@@ -89,7 +88,7 @@
 										if(defaults.debug) console.log(data);
 									}
 								}).always(function () {
-									stopSpam = false;
+
 								});
 
 							} else {
@@ -103,31 +102,34 @@
 							if(defaults.debug) console.log('%c Ajax success!', 'color: white; background-color: green;');
 							if(defaults.debug) console.log(data);
 
-							data.status = true; // Delete
-							data.msg = "Ваш запрос успешно отправлен!"; // Delete
-
 				      var status = 'error';
 
 				      if( data.status ) {
 				        status = 'success';
 								$form.find('.'+ defaults.input.className).removeClass(defaults.input.className + " " + defaults.input.success.className);
 								$form[0].reset();
-				      }
+				      } else {
+								stopSpam = false;
+							}
 
 				      defaults.showFormMsg($form, data.msg, status);
-						},
 
+							defaults.afterAjaxOk(data, $form);
+						},
 						onAjaxError: function(data, $form) {
 							if(defaults.debug) console.log('%c Ajax error!', 'color: white; background-color: red;');
 							if(defaults.debug) console.log(data);
 						},
+						afterAjaxOk: function(data, $form) {
 
+						},
 						showFormMsg: function($form, msg, status) {
 							var $msgBox = $('.'+ defaults.formMsg.className),
 									msgBox_height = 0;
 
 							if( !$msgBox.length ) {
-								$form.append("<div class='"+ defaults.formMsg.className +"'></div>").css('position', 'relative');
+								$form.append("<div class='"+ defaults.formMsg.className +"'></div>");
+								if( $form.css('position') == 'static' ) $form.css('position', 'relative');
 							}
 
 							$msgBox = $('.'+ defaults.formMsg.className).addClass(defaults.formMsg.className + '_'+ status);
@@ -145,10 +147,13 @@
 								$msgBox.animate({ opacity: 0, top: "-="+ msgBox_height }, 500, function () {
 									$(this).fadeOut(function () {
 										$(this).remove();
+										stopSpam = false;
+										defaults.afterShowFormMsg($form, msg, status);
 									});
 								});
 							}, 4000);
-						}
+						},
+						afterShowFormMsg: function($form, msg, status) {}
 					},
 
 					messages = {
@@ -249,7 +254,7 @@
 							}
 
 				    	return response;
-						},
+						}
 
 					};
 
@@ -306,14 +311,14 @@
 					if( defaults.debug ) console.log(fieldset);
 					
 					$form.attr('novalidate', true);
-					
 
 					$form.submit(function(e) {
 						// e.preventDefault();
+						// console.log(stopSpam);
 						if( stopSpam ) return false;
 						else stopSpam = true;
 						
-						$form.find('button, input[type="submit"]').attr('disabled', true);
+						// $form.find('button, input[type="submit"]').attr('disabled', true);
 						$('.'+ defaults.formMsg.className).remove();
 
 						// Validate form
@@ -325,8 +330,8 @@
 							if( defaults.focusInvalid ) $form.find('.'+ defaults.input.error.className).first().focus();
 							if( defaults.formInvalidMsg && !$('.msgBox').length ) defaults.showFormMsg($form, messages.validation_error, 'error');
 							defaults.onValidationError($form, messages.validation_error, 'error');
-							return false;
 						}
+						return false;
 					});
 				});
 			}
