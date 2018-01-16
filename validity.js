@@ -9,52 +9,75 @@
 			var $forms = $(this), 
 					defaults = {
 						debug: false,
+						validateControls: 'input:not([type=hidden],[type=image],[type=reset],[type=submit],[type=button],[type=file]), textarea, select',
+						excludeControls: 'input[type=radio], input[type=checkbox]',
+						
+						input: {
+							className: 'validity-input',
+							styling: true,
+							success: {
+								className: 'validity-input_success'
+							},
+							error: {
+								className: 'validity-input_error'
+							}
+						},
+
+						inputMsg: {
+							className: 'validity-input-msg',
+							show: true,
+							position: 'absolute|top[50%]/right[2px]/transform[translateY(-50%)]',
+							parent: 'auto',
+							errorBox: {
+								className: false,
+								errorBoxParent: 'auto',
+							},
+							tooltip: true,
+							tooltipClass: 'validity-tooltip',
+							tooltipType: 'validity-tooltip_left',
+							tooltipPos: 'right[100%]/top[50%]/transform[translateY(-50%)]',
+							success: {
+								className: 'validity-input-msg_success',
+								msg: "&#10003;",
+								tooltip: false
+							},
+							error: {
+								className: 'validity-input-msg_error'
+							}
+						},
+
+						formMsg: {
+							className: 'msgBox',
+
+						},
+
+						language: null,
+						show_names: true,
+						detectIntervention: true,
+						
+						focusInvalid: true,
+						formInvalidMsg: true,
+
 						ajax: false,
 						action: '/',
 						method: 'POST',
 						dataType: 'json',
 						cache: false,
-						elements: 'input:not([type=hidden],[type=image],[type=reset],[type=submit],[type=button],[type=file]), textarea, select',
-						exclude: 'input[type=radio], input[type=checkbox]',
-						position: 'static|bottom/left',
-						errorClass: 'error',
-						successClass: 'success',
-						inputStyle: 'validity-input',
-						inputSuccess: {
-							styling: false,
-							showMsg: false,
-							msg: "&#10003;",
-							tooltip: false
-						},
-						inputError: {
-							styling: true,
-							showMsg: true,
-							tooltip: true
-						},
-						tooltip: 'validity-tooltip_top',
-						tooltipPos: 'bottom[100%]/left[0]',
-						language: null,
-						show_names: true,
-						detectIntervention: true,
-						focusInvalid: true,
-						onValidationOk: function(e, $form) {
 
+						onValidationOk: function(e, $form) {
 							configure_form($form);
 
 							if( defaults.ajax ) {
 								e.preventDefault();
 								
 								var formData = $form.serialize();
-								if(defaults.debug) console.log('ajax');
+								if(defaults.debug) console.log('%c Ajax sending...', 'color: white; background-color: blue;');
 								if(defaults.debug) console.log(formData);
 
-								$form.find('button, input[type="submit"]').attr('disabled', true);
-
 								$.ajax({
-									type: defaults.method,
+									method: defaults.method,
 									url: defaults.action,
 									data: formData,
-									method: defaults.method,
 									dataType: defaults.dataType,
 									cache: defaults.cache,
 									success: function(data) {
@@ -74,13 +97,63 @@
 							}
 						},
 						onValidationError: function($form, message, status) {
-							if( !$('.msgBox').length ) showFormMsg($form, message, status);
+							
 						},
-						onAjaxOk: function (data, $form) {
-							if(defaults.debug) console.log('ajaxOk');
+						onAjaxOk: function(data, $form) {
+							if(defaults.debug) console.log('%c Ajax success!', 'color: white; background-color: green;');
 							if(defaults.debug) console.log(data);
+
+							data.status = true; // Delete
+							data.msg = "Ваш запрос успешно отправлен!"; // Delete
+
+				      var status = 'error';
+
+				      if( data.status ) {
+				        status = 'success';
+				      }
+
+				      defaults.showFormMsg($form, data.msg, status);
+						},
+
+						onAjaxError: function(data, $form) {
+							if(defaults.debug) console.log('%c Ajax error!', 'color: white; background-color: red;');
+							if(defaults.debug) console.log(data);
+						},
+
+						showFormMsg: function($form, msg, status) {
+							var $msgBox = $('.'+ defaults.formMsg.className),
+									msgBox_height = 0;
+
+							if( !$msgBox.length ) {
+								$form.append("<div class='"+ defaults.formMsg.className +"'></div>").css('position', 'relative');
+							}
+
+							$msgBox = $('.'+ defaults.formMsg.className).addClass(defaults.formMsg.className + '_'+ status);
+
+							$msgBox.html(msg);
+							msgBox_height = $msgBox.outerHeight();
+
+							$msgBox.css('top', '-'+ msgBox_height +'px');
+
+							$msgBox.fadeIn('fast', 'linear', function () {
+								$(this).animate({ opacity: 1, 'top': "+="+ msgBox_height }, 500);
+							});
+
+							setTimeout(function () {
+								$msgBox.animate({ opacity: 0, top: "-="+ msgBox_height }, 500, function () {
+									$(this).fadeOut(function () {
+										$(this).remove();
+										$form.find('button, input[type="submit"]').attr('disabled', false);
+										if( status == 'success' ) {
+											$form.find('.'+ defaults.input.className).removeClass(defaults.input.className + " " + defaults.input.success.className);
+											$form[0].reset();
+										}
+									});
+								});
+							}, 4000);
 						}
 					},
+
 					messages = {
 						required: 'Поле %name не должно быть пустым',
 						email: 'Введите email в правильном формате (xxxxxx@xxx.xxx)',
@@ -179,7 +252,8 @@
 							}
 
 				    	return response;
-						}
+						},
+
 					};
 
 			// Run plugin
@@ -187,7 +261,7 @@
 
 			// Update defaults with options, run forms' analyzer
 			function init(options) {
-				$.extend(defaults, options);
+				$.extend(true, defaults, options);
 
 				if( defaults.language ) {
 					messages = $['validityLanguage_' + defaults.language]();
@@ -206,7 +280,7 @@
 					var $form = $(this),
 							fieldset = [];
 
-					$form.find(defaults.elements).not(defaults.exclude).each(function() {
+					$form.find(defaults.validateControls).not(defaults.excludeControls).each(function() {
 						var $this = $(this),
 								name = $this.attr('name'),
 								attributes = $this[0].attributes;
@@ -231,50 +305,54 @@
 						});
 						fieldset[name]['attr']['type'] = fieldset[name]['type'];
 					});
-					if(defaults.debug) console.log(fieldset);
+					
+					if( defaults.debug ) console.log(fieldset);
+					
 					$form.attr('novalidate', true);
 
 					$form.submit(function(e) {
+						// e.preventDefault();
+
+						$form.find('button, input[type="submit"]').attr('disabled', true);
 
 						// Validate form
-						if( validate(this, fieldset) ) {
+						if( validate($form, fieldset) ) {
+							if( defaults.debug ) console.log('%c Validation success!', 'color: white; background-color: green;');
 							defaults.onValidationOk(e, $form);
 						} else {
-							if( defaults.focusInvalid ) {
-								$form.find("."+defaults.inputStyle+ "_"+ defaults.errorClass).first().focus();
-							}
+							if( defaults.debug ) console.log('%c Validation failed!', 'color: white; background-color: red;');
+							if( defaults.focusInvalid ) $form.find('.'+ defaults.input.error.className).first().focus();
+							if( defaults.formInvalidMsg && !$('.msgBox').length ) defaults.showFormMsg($form, messages.validation_error, 'error');
 							defaults.onValidationError($form, messages.validation_error, 'error');
+							return false;
 						}
-						return false;
 					});
 				});
 			}
 
 			// Validate set of form's inputs
-			function validate(form, fieldset) {
-	// console.log(fieldset);
-				var $form = $(form),
-						isValid = true;
+			function validate($form, fieldset) {
+				var isValid = true;
 
-				$form.find('.validity-note').remove();
-				$form.find('.'+defaults.inputStyle + '_' + defaults.errorClass).removeClass(defaults.inputStyle + '_' + defaults.errorClass);
+				$form.find('.'+defaults.inputMsg.className).remove();
 
 				for( name in fieldset ) {
 					var $field = $form.find('[name='+ name +']'),
 							field_value = '',
 							show_name = '',
 							testValid,
-							errorMsg = '';
+							errorMsg = '',
+							status = '';
 
 					if( $field.length > 0 ) {
 						field_value = $field.val().trim();	
 						$field.val(field_value);
 					} else {
-						if(defaults.debug) console.log('%c Field "'+ name + '" have been lost!', 'background-color: red; color: white;');
-
+						if( defaults.debug ) console.log('%c Field "'+ name + '" have been lost or modified!', 'color: white; background-color: red;');
+						
 						if( defaults.detectIntervention ) {
 							if(defaults.debug) console.log('%c '+ messages.detect_intervention, 'background-color: red; color: white;');
-							showFormMsg($form, messages.detect_intervention, 'error');
+							defaults.showFormMsg($form, messages.detect_intervention, 'error');
 							isValid = false;
 							break;
 						} else {
@@ -291,6 +369,7 @@
 							testValid = {status: true};
 						} else {
 							fieldset[name].rules.forEach(function(rule) {
+								if( defaults.debug ) console.log('field = '+ name +' ; rule = '+rule);
 								var rule_params = rule.match(/\([^\)]*\)/);
 								rule = rule.replace(/\(.*\)/, '');
 
@@ -311,7 +390,7 @@
 							testValid = {status: true};
 						} else {
 							for( attr in fieldset[name].attr ) {
-								console.log('field = '+ name +' ; attr = '+attr);
+								if( defaults.debug ) console.log('field = '+ name +' ; attr = '+attr);
 								testValid = rules[attr](field_value, fieldset[name].attr[attr]);
 
 								if( !testValid.status && errorMsg == '' ) errorMsg = testValid.msg.replace(/%name\W/, show_name);
@@ -322,21 +401,39 @@
 					}
 
 					if( errorMsg !== '' ) {
-						if( defaults.inputError.styling ) {
-							inputStyling($field, 'error');
-						}
-						if( defaults.inputError.showMsg ) {
-							showInputMsg($field, errorMsg, 'error');
-						}
+						status = 'error';
 					} else {
-						if( defaults.inputSuccess.styling ) {
-							inputStyling($field, 'success');
-						}
-						if( defaults.inputSuccess.showMsg ) {
-							showInputMsg($field, defaults.inputSuccess.msg, 'success');
+						status = 'success';
+					}
+
+					if( defaults.input[status].styling !== undefined ? defaults.input[status].styling : defaults.input.styling ) {
+						inputStyling($field, status);
+					}
+
+					if( !(defaults.inputMsg.errorBox.className && status == 'success') ) {
+						if( defaults.inputMsg[status].show !== undefined ? defaults.inputMsg[status].show : defaults.inputMsg.show ) {
+							showInputMsg($field, (status == 'error' ? errorMsg : defaults.inputMsg.success.msg), status);
 						}
 					}
 
+					// Hide msg and style input after change
+					$field.keypress(function() {
+						$field.removeClass(defaults.input.error.className + " " +defaults.input.success.className);
+						
+						if( defaults.inputMsg.errorBox.className ) {
+							$('.'+ defaults.inputMsg.errorBox.className).html('');
+						} else {
+							var parent = defaults.inputMsg[status].parent !== undefined ? defaults.inputMsg[status].parent : defaults.inputMsg.parent,
+								$parent = $field.parent();
+
+
+							if( parent != 'auto' ) {
+								$parent = $field.closest(parent);
+							}
+
+							$parent.find('.'+defaults.inputMsg.className).remove();
+						}
+					});
 
 					if ( isValid ) isValid = testValid.status;
 				}
@@ -355,113 +452,92 @@
 			}
 
 			function inputStyling($field, status) {
+				var className = '';
 				if( status == 'error' ) {
-					classSuffix = defaults.errorClass;
+					className = defaults.input.error.className;
+					$field.removeClass(defaults.input.success.className);
 				} else if( status == 'success' ) {
-					classSuffix = defaults.successClass;
-				} else {
-					classSuffix = defaults.warningClass;
+					className = defaults.input.success.className;
+					$field.removeClass(defaults.input.error.className);
 				}
 
-				if( defaults.inputStyle ) $field.addClass(defaults.inputStyle + '_' + classSuffix);
-
-				$field.keypress(function() {
-					$field.removeClass(function (index, className) {
-				    return (className.match (new RegExp('^'+defaults.inputStyle,"g")) || []).join(' ');
-				  });
-					$field.parent().find('.validity-note').remove();
-				});
+				if( !$field.hasClass(className) ) $field.addClass(defaults.input.className+" "+ className);
 			}
 
 			// Show message with result of input validation
 			function showInputMsg($field, msg, status) {
-				var position = defaults.position.split('|')
-						classSuffix = '';
-
-				if( status == 'error' ) {
-					classSuffix = defaults.errorClass;
-				} else if( status == 'success' ) {
-					classSuffix = defaults.successClass;
-				} else {
-					classSuffix = defaults.warningClass;
-				}
-
-				if( position[0] == 'static' ) {
-					$field.after("<div class='validity-note validity-note_static validity-note_"+ classSuffix +"'>"+ msg +"</div>");
-				} else {
-					var $parent = $field.parent(),
-							style = 'position:' + position[0] +';',
-							tooltip = '';
-
-					positions = position[1].split('/');
-
-					positions.forEach(function(pos) {
-						var pos_name, pos_param; 
-
-						if( /\[.*\]/.test(pos) ) {
-							pos_name = pos.replace(/\[.*\]/, '');
-							pos_param = pos.match(/\[.*\]/)[0].replace(/[\[\]]/g, '');
-						} else {
-							pos_name = pos;
-							pos_param = 0;
-						}
-						style += pos_name + ': '+ pos_param +';';
-					});
-
-					if( status !== 'success' || (status == 'success' && defaults.inputSuccess.tooltip) ) {
-						if( defaults.tooltip && position[0] == 'absolute' ) {
-							var tooltip_style = 'position: absolute;';
-
-							defaults.tooltipPos.split('/').forEach(function(pos) {
-								var pos_name, pos_param;
-								if( /\[.*\]/.test(pos) ) {
-									tooltip_pos_name = pos.replace(/\[.*\]/, '');
-									tooltip_pos_param = pos.match(/\[.*\]/)[0].replace(/[\[\]]/g, '');
-								} else {
-									tooltip_pos_name = pos;
-									tooltip_pos_param = '100%';
-								}
-
-								tooltip_style += tooltip_pos_name + ': '+ tooltip_pos_param +';';
-							});
-
-							tooltip = "<div class='"+ defaults.tooltip +"' style='"+ tooltip_style +"'></div>";
-						}
+				var position = defaults.inputMsg[status].position !== undefined ? defaults.inputMsg[status].position.split('|') : defaults.inputMsg.position.split('|'),
+						className = defaults.inputMsg[status].className;
+				
+				if( defaults.inputMsg.errorBox.className ) {
+					
+					if( $('.'+ defaults.inputMsg.errorBox.className).length == 0 ) {
+						if( defaults.inputMsg.errorBox.parent == 'auto' ) $errorBoxParent = $field.parents('form');
+						else $errorBoxParent = $(defaults.inputMsg.errorBox.parent);
+						
+						$errorBoxParent.prepend("<div class='"+ defaults.inputMsg.errorBox.className +"'></div>");
 					}
 
-					$parent.css('position', 'relative');
-					$parent.append("<div class='validity-note validity-note_"+ classSuffix +"' style='"+ style +"'>"+ msg + tooltip +"</div>")
-				}
-				// console.error(msg);
-			}
+					var $errorBox = $('.'+ defaults.inputMsg.errorBox.className);
 
-			function showFormMsg($form, msg, status) {
-				var $msgBox = $('.msgBox');
+					$errorBox.append("<div class='"+ defaults.inputMsg.className +" "+ defaults.inputMsg.className +"_static "+ className +"'>"+ msg +"</div>");
+				} else {
+					var parent = defaults.inputMsg[status].parent !== undefined ? defaults.inputMsg[status].parent : defaults.inputMsg.parent,
+							$parent = $field.parent();
 
-				if( !$msgBox.length ) {
-					$form.append("<div class='msgBox'></div>")
-				}
+					if( parent != 'auto' ) {
+						$parent = $field.closest(parent);
+					}
+	
+					if( position[0] == 'static' ) {
+						$parent.append("<div class='"+ defaults.inputMsg.className +" "+ defaults.inputMsg.className +"_static "+ className +"'>"+ msg +"</div>");
+					} else {
+						var style = 'position:' + position[0] +';',
+						tooltip = '';
 
-				$msgBox = $('.msgBox').addClass('msgBox_'+ status);
+						positions = position[1].split('/');
 
-				$msgBox.html(msg);
+						positions.forEach(function(pos) {
+							var pos_name, pos_param; 
 
-				$msgBox.fadeIn('fast', 'linear', function () {
-					$(this).animate({ opacity: 1, 'top': "+=50" }, 500);
-				});
-
-				setTimeout(function () {
-					$msgBox.animate({ opacity: 0, top: "-=50" }, 500, function () {
-						$(this).fadeOut(function () {
-							$(this).remove();
-							$form.find('button, input[type="submit"]').attr('disabled', false);
-							if( status == 'success' ) {
-								$form[0].reset();
-								$.modal.close();
+							if( /\[.*\]/.test(pos) ) {
+								pos_name = pos.replace(/\[.*\]/, '');
+								pos_param = pos.match(/\[.*\]/)[0].replace(/[\[\]]/g, '');
+							} else {
+								pos_name = pos;
+								pos_param = 0;
 							}
+							style += pos_name + ': '+ pos_param +';';
 						});
-					});
-				}, 4000);
+
+						// Add tooltip arrow
+						if( defaults.inputMsg[status].tooltip !== undefined ? defaults.inputMsg[status].tooltip : defaults.inputMsg.tooltip ) {
+							if( position[0] == 'absolute' ) {
+								var tooltip_style = 'position: absolute;',
+										tooltip_pos = defaults.inputMsg[status].tooltipPos !== undefined ? defaults.inputMsg[status].tooltipPos : defaults.inputMsg.tooltipPos,
+										tooltip_type = defaults.inputMsg[status].tooltipType !== undefined ? defaults.inputMsg[status].tooltipType : defaults.inputMsg.tooltipType;
+
+								tooltip_pos.split('/').forEach(function(pos) {
+									var pos_name, pos_param;
+									if( /\[.*\]/.test(pos) ) {
+										tooltip_pos_name = pos.replace(/\[.*\]/, '');
+										tooltip_pos_param = pos.match(/\[.*\]/)[0].replace(/[\[\]]/g, '');
+									} else {
+										tooltip_pos_name = pos;
+										tooltip_pos_param = '100%';
+									}
+
+									tooltip_style += tooltip_pos_name + ': '+ tooltip_pos_param +';';
+								});
+
+								tooltip = "<div class='"+ defaults.inputMsg.tooltipClass +" "+ tooltip_type +"' style='"+ tooltip_style +"'></div>";
+							}
+						}
+
+						$parent.css('position', 'relative');
+						$parent.append("<div class='"+ defaults.inputMsg.className +" "+ className +"' style='"+ style +"'>"+ msg + tooltip +"</div>")
+					}
+				}
 			}
 
 			return this.init;
@@ -472,7 +548,7 @@
 /* TODO:
 ** ---done--- 1. Валидация по типу поля
 ** ---done--- 2. Уведомление о вмещательстве в поля формы - true|false
-** 3. Уведомления отправки/неотправки формы - showFormMsg()
+** ---done--- 3. Уведомления отправки/неотправки формы - showFormMsg()
 ** ---done--- 4. Уведомление об успешной валидации поля - true|false
-** 5. Редирект после успешной отправки формы - true|false
+** ---done--- 5. Рефакторинг настроек
 */

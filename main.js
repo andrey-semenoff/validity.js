@@ -1,20 +1,23 @@
 $(function () {
 
 	$('#contact-form').validity({
+		debug: true,
 		ajax: true,
+		action: 'mail.php',
 		// language: 'en',
 		// show_names: false,
-		position: 'absolute|top[50%]/right[2px]/transform[translateY(-50%)]',
-		tooltip: 'validity-tooltip_left',
-		// tooltip: false,
-		tooltipPos: 'right[100%]/top[50%]/transform[translateY(-50%)]',
-		// inputStyle: false,
+		inputMsg: {
+			errorBox: {
+				className: 'error-box',
+				parent: 'auto',
+			},
+		},
 		rules: {
 			'captcha': function(val) {
 				return {status: true}
 			}
 		},
-		detectIntervention: false,
+		detectIntervention: true,
 	});
 
 });
