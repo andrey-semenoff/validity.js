@@ -6,7 +6,8 @@
 (function($){
 	$.fn.extend({
 		validity: function(options) {
-			var $forms = $(this), 
+			var $forms = $(this),
+					stopSpam = false, 
 					defaults = {
 						debug: false,
 						validateControls: 'input:not([type=hidden],[type=image],[type=reset],[type=submit],[type=button],[type=file]), textarea, select',
@@ -88,7 +89,7 @@
 										if(defaults.debug) console.log(data);
 									}
 								}).always(function () {
-
+									stopSpam = false;
 								});
 
 							} else {
@@ -96,7 +97,7 @@
 							}
 						},
 						onValidationError: function($form, message, status) {
-							
+							stopSpam = false;
 						},
 						onAjaxOk: function(data, $form) {
 							if(defaults.debug) console.log('%c Ajax success!', 'color: white; background-color: green;');
@@ -109,6 +110,8 @@
 
 				      if( data.status ) {
 				        status = 'success';
+								$form.find('.'+ defaults.input.className).removeClass(defaults.input.className + " " + defaults.input.success.className);
+								$form[0].reset();
 				      }
 
 				      defaults.showFormMsg($form, data.msg, status);
@@ -142,11 +145,6 @@
 								$msgBox.animate({ opacity: 0, top: "-="+ msgBox_height }, 500, function () {
 									$(this).fadeOut(function () {
 										$(this).remove();
-										$form.find('button, input[type="submit"]').attr('disabled', false);
-										if( status == 'success' ) {
-											$form.find('.'+ defaults.input.className).removeClass(defaults.input.className + " " + defaults.input.success.className);
-											$form[0].reset();
-										}
 									});
 								});
 							}, 4000);
@@ -308,11 +306,15 @@
 					if( defaults.debug ) console.log(fieldset);
 					
 					$form.attr('novalidate', true);
+					
 
 					$form.submit(function(e) {
 						// e.preventDefault();
-
+						if( stopSpam ) return false;
+						else stopSpam = true;
+						
 						$form.find('button, input[type="submit"]').attr('disabled', true);
+						$('.'+ defaults.formMsg.className).remove();
 
 						// Validate form
 						if( validate($form, fieldset) ) {
@@ -543,11 +545,3 @@
 		}
 	});
 })(jQuery);
-
-/* TODO:
-** ---done--- 1. Валидация по типу поля
-** ---done--- 2. Уведомление о вмещательстве в поля формы - true|false
-** ---done--- 3. Уведомления отправки/неотправки формы - showFormMsg()
-** ---done--- 4. Уведомление об успешной валидации поля - true|false
-** ---done--- 5. Рефакторинг настроек
-*/
