@@ -93,7 +93,6 @@
 
 							} else {
 								console.log('reload');
-								// $form.unbind('submit').submit();
 							}
 						},
 						onValidationError: function($form, message, status) {
