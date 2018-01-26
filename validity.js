@@ -139,9 +139,7 @@
 
 							$msgBox.css('top', '-'+ msgBox_height +'px');
 
-							$msgBox.fadeIn('fast', 'linear', function () {
-								$(this).animate({ opacity: 1, 'top': "+="+ msgBox_height }, 500);
-							});
+							$msgBox.fadeIn('fast', 'linear').animate({ opacity: 1, 'top': "+="+ msgBox_height }, 100);
 
 							setTimeout(function () {
 								$msgBox.animate({ opacity: 0, top: "-="+ msgBox_height }, 500, function () {
